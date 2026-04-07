@@ -1,7 +1,7 @@
-import { parse as parseCsv } from "csv-parse/browser/esm";
-import { readSheet } from "read-excel-file/browser";
-import { parse, isValid } from "date-fns";
 import { CSV_COL, MIN_DATA_CELLS } from "@/utils/csv-columns";
+import { parse as parseCsv } from "csv-parse/browser/esm";
+import { isValid, parse } from "date-fns";
+import { readSheet } from "read-excel-file/browser";
 
 export interface PatientRecord {
   an: string;
@@ -14,6 +14,7 @@ export interface PatientRecord {
   icdDescription: string;
   attendingDoctor: string;
   chiefComplaint: string;
+  roundingDate: Date; // The date from the section header (e.g., 2/11/2025)
 }
 
 export interface ParsedData {
@@ -116,7 +117,10 @@ export function useExcelParser() {
   /**
    * Convert a valid data row into a PatientRecord.
    */
-  function rowToRecord(row: unknown[]): PatientRecord | null {
+  function rowToRecord(
+    row: unknown[],
+    roundingDate: Date,
+  ): PatientRecord | null {
     const admitDateStr = String(row[CSV_COL.ADMIT_DATE] ?? "").trim();
     const admitDate = parseDate(admitDateStr);
     if (!admitDate) return null;
@@ -135,6 +139,7 @@ export function useExcelParser() {
       icdDescription: String(row[CSV_COL.ICD_DESC] ?? "").trim(),
       attendingDoctor: String(row[CSV_COL.ATTENDING_DOCTOR] ?? "").trim(),
       chiefComplaint: String(row[CSV_COL.CHIEF_COMPLAINT] ?? "").trim(),
+      roundingDate,
     };
   }
 
@@ -197,11 +202,21 @@ export function useExcelParser() {
       // Parse valid data rows into PatientRecords
       const records: PatientRecord[] = [];
       const doctorSet = new Set<string>();
+      let currentRoundingDate: Date | null = null;
 
       for (const row of rows) {
-        if (!isDataRow(row)) continue;
+        // If this is a date header (e.g., "2/11/2025"), update currentRoundingDate
+        if (isDateHeaderRow(row)) {
+          const nonEmpty = row.filter(
+            (cell) => String(cell ?? "").trim().length > 0,
+          );
+          currentRoundingDate = parseDate(String(nonEmpty[0]));
+          continue;
+        }
 
-        const record = rowToRecord(row);
+        if (!isDataRow(row) || !currentRoundingDate) continue;
+
+        const record = rowToRecord(row, currentRoundingDate);
         if (!record) continue;
         if (!record.patientName) continue;
 

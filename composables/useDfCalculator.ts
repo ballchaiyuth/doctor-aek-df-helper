@@ -1,16 +1,18 @@
-import { isSameDay } from "date-fns";
-import type { PatientRecord } from "./useExcelParser";
+import masterMapping from "@/assets/data/master-mapping.json";
+import type { PatientRecord } from "@/composables/useExcelParser";
 import {
   WARD_BILLING_CODE,
-  WARD_EXCLUDE_START_MINUTES,
   WARD_EXCLUDE_END_MINUTES,
+  WARD_EXCLUDE_START_MINUTES,
 } from "@/utils/csv-columns";
-import masterMapping from "@/assets/data/master-mapping.json";
+import { isSameDay } from "date-fns";
 
 export interface DfReportRow {
+  an: string; // Sequential Admission Number for correct sorting
   patientName: string;
   hn: string;
-  admitDate: string;
+  admitDate: string; // The actual admit date from CSV (e.g., 8/10/2025)
+  roundingDate: string; // The shift date from section header (e.g., 2/11/2025)
   billingCode: string;
   icdCode: string;
   icdDescription: string;
@@ -22,12 +24,12 @@ export interface DfReportRow {
  */
 export function useDfCalculator() {
   /**
-   * Look up billing code from ICD-10 code via master mapping.
-   * Returns the code if found, or the raw ICD code as fallback.
+   * Look up ER billing code from ICD-10 code via master mapping.
+   * Returns the code if found, or "214" (ER Fallback) if not found.
    */
-  function lookupBillingCode(icdCode: string): string {
+  function lookupERBillingCode(icdCode: string): string {
     const mapping = masterMapping as Record<string, string>;
-    return mapping[icdCode] || icdCode;
+    return mapping[icdCode] || "214";
   }
 
   /**
@@ -41,8 +43,8 @@ export function useDfCalculator() {
   }
 
   /**
-   * ER Logic: Filter records by doctor name and shift dates,
-   * then map ICD-10 to billing codes.
+   * ER Logic: Filter records by doctor name and shift dates (matched against roundingDate),
+   * then map ICD-10 to billing codes. Fallback to "214" if not mapped.
    */
   function calculateER(
     records: PatientRecord[],
@@ -51,12 +53,14 @@ export function useDfCalculator() {
   ): DfReportRow[] {
     return records
       .filter((r) => r.attendingDoctor === doctorName)
-      .filter((r) => shiftDates.some((sd) => isSameDay(r.admitDate, sd)))
+      .filter((r) => shiftDates.some((sd) => isSameDay(r.roundingDate, sd)))
       .map((r) => ({
+        an: r.an,
         patientName: r.patientName,
         hn: r.hn,
         admitDate: formatDate(r.admitDate),
-        billingCode: lookupBillingCode(r.icdCode),
+        roundingDate: formatDate(r.roundingDate),
+        billingCode: lookupERBillingCode(r.icdCode),
         icdCode: r.icdCode,
         icdDescription: r.icdDescription,
       }));
@@ -67,6 +71,7 @@ export function useDfCalculator() {
    * Patients admitted on the shift day between 08:00-16:00 belong to ER doctor.
    */
   function isExcludedFromWard(record: PatientRecord, shiftDate: Date): boolean {
+    // Check if admitted on the SAME DAY as the rounding shift
     if (!isSameDay(record.admitDate, shiftDate)) return false;
 
     const hours = record.admitDateTime.getHours();
@@ -90,25 +95,23 @@ export function useDfCalculator() {
   ): DfReportRow[] {
     const results: DfReportRow[] = [];
 
+    // We iterate by shift dates to group data by the day Dr. Aek rounded the ward
     for (const shiftDate of shiftDates) {
+      // Find all records that belong to this shift section in the CSV
       const dayRecords = records.filter((r) =>
-        shiftDates.some((sd) => isSameDay(r.admitDate, sd)),
+        isSameDay(r.roundingDate, shiftDate),
       );
 
       for (const record of dayRecords) {
+        // EXCLUDE if admitted on this shiftDate between 08:00-16:00
         if (isExcludedFromWard(record, shiftDate)) continue;
 
-        // Avoid duplicates from multiple shift date iterations
-        const exists = results.some(
-          (r) =>
-            r.hn === record.hn && r.admitDate === formatDate(record.admitDate),
-        );
-        if (exists) continue;
-
         results.push({
+          an: record.an,
           patientName: record.patientName,
           hn: record.hn,
           admitDate: formatDate(record.admitDate),
+          roundingDate: formatDate(record.roundingDate),
           billingCode: WARD_BILLING_CODE,
           icdCode: record.icdCode,
           icdDescription: record.icdDescription,
@@ -132,7 +135,7 @@ export function useDfCalculator() {
   return {
     calculateER,
     calculateWard,
-    lookupBillingCode,
+    lookupERBillingCode,
     isExcludedFromWard,
     toClipboardText,
     formatDate,

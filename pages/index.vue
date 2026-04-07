@@ -39,48 +39,71 @@
       <!-- Step 2: Configuration -->
       <section v-if="currentStep === 'config'" class="animate-fade-in">
         <!-- Tab navigation -->
-        <div
-          class="flex gap-1 bg-app-card ring-1 ring-app-surface p-1 rounded-xl mb-6 max-w-xs"
-        >
-          <button
-            class="flex-1 py-2.5 px-4 text-sm font-medium rounded-lg transition-all"
-            :class="
-              activeTab === 'er'
-                ? 'bg-app-surface text-app-green shadow-sm border border-app-surface'
-                : 'text-slate-400 hover:text-slate-200'
-            "
-            @click="activeTab = 'er'"
+        <div class="flex justify-center mb-8">
+          <div
+            class="flex items-center gap-1 bg-app-card ring-1 ring-app-surface p-1.5 rounded-2xl shadow-xl max-w-sm w-full"
           >
-            🏥 ER
-          </button>
-          <button
-            class="flex-1 py-2.5 px-4 text-sm font-medium rounded-lg transition-all"
-            :class="
-              activeTab === 'ward'
-                ? 'bg-app-surface text-app-green shadow-sm border border-app-surface'
-                : 'text-slate-400 hover:text-slate-200'
-            "
-            @click="activeTab = 'ward'"
-          >
-            🛏️ Ward
-          </button>
+            <button
+              class="flex-1 py-3 px-6 text-sm font-bold rounded-xl transition-all duration-300 relative group overflow-hidden"
+              :class="
+                activeTab === 'er'
+                  ? 'bg-app-surface text-app-green shadow-[0_0_20px_rgba(34,197,94,0.15)] ring-1 ring-white/5'
+                  : 'text-slate-500 hover:text-slate-300'
+              "
+              @click="activeTab = 'er'"
+            >
+              <span
+                class="relative z-10 flex items-center justify-center gap-2"
+              >
+                <span class="text-lg">🏥</span>
+                <span>ER</span>
+              </span>
+            </button>
+            <button
+              class="flex-1 py-3 px-6 text-sm font-bold rounded-xl transition-all duration-300 relative group overflow-hidden"
+              :class="
+                activeTab === 'ward'
+                  ? 'bg-app-surface text-app-green shadow-[0_0_20px_rgba(34,197,94,0.15)] ring-1 ring-white/5'
+                  : 'text-slate-500 hover:text-slate-300'
+              "
+              @click="activeTab = 'ward'"
+            >
+              <span
+                class="relative z-10 flex items-center justify-center gap-2"
+              >
+                <span class="text-lg">🛏️</span>
+                <span>Ward</span>
+              </span>
+            </button>
+          </div>
         </div>
 
         <!-- File info -->
         <div
-          class="mb-6 p-4 bg-app-card rounded-xl border border-app-surface flex items-center justify-between"
+          class="mb-8 p-5 bg-app-card rounded-2xl border border-app-surface flex items-center justify-between shadow-lg relative overflow-hidden"
         >
-          <div class="flex items-center gap-3">
+          <div class="absolute top-0 left-0 w-1 h-full bg-app-green/50" />
+          <div class="flex items-center gap-4">
             <div
-              class="w-10 h-10 bg-app-green/10 rounded-lg flex items-center justify-center border border-app-green/20"
+              class="w-12 h-12 bg-app-green/10 rounded-xl flex items-center justify-center border border-app-green/20"
             >
               <div
-                class="w-5 h-5 bg-app-green mask-[url('/icons/fa-circle-check.svg')] mask-contain mask-no-repeat mask-center"
+                class="w-6 h-6 bg-app-green mask-[url('/icons/fa-circle-check.svg')] mask-contain mask-no-repeat mask-center"
               />
             </div>
             <div>
-              <p class="text-sm font-medium text-slate-200">อ่านไฟล์สำเร็จ</p>
-              <p class="text-xs text-slate-400">
+              <p
+                class="text-sm font-bold text-slate-100 flex items-center gap-2"
+              >
+                <span>อ่านไฟล์สำเร็จ</span>
+                <span
+                  v-if="selectedFileName"
+                  class="text-xs font-mono font-normal px-2 py-0.5 bg-white/5 rounded-full text-slate-400 border border-white/5"
+                >
+                  {{ selectedFileName }}
+                </span>
+              </p>
+              <p class="text-xs text-slate-500 mt-1">
                 {{ parsedData?.records.length }} รายการ ·
                 {{ parsedData?.doctors.length }} แพทย์ ·
                 {{ parsedData?.shiftDates.length }} วันเวร
@@ -88,7 +111,7 @@
             </div>
           </div>
           <button
-            class="text-xs text-slate-400 hover:text-red-400 font-medium transition-colors"
+            class="px-4 py-2 text-xs text-slate-400 hover:text-red-400 hover:bg-red-400/5 rounded-lg border border-transparent hover:border-red-400/20 font-medium transition-all"
             @click="reset"
           >
             เปลี่ยนไฟล์
@@ -155,8 +178,8 @@
 </template>
 
 <script setup lang="ts">
-import type { ParsedData } from "@/composables/useExcelParser";
 import type { DfReportRow } from "@/composables/useDfCalculator";
+import type { ParsedData } from "@/composables/useExcelParser";
 
 const { parseFile, isLoading, error: parseError } = useExcelParser();
 const { calculateER, calculateWard } = useDfCalculator();
@@ -164,14 +187,27 @@ const { calculateER, calculateWard } = useDfCalculator();
 const currentStep = ref<"upload" | "config" | "results">("upload");
 const activeTab = ref<"er" | "ward">("er");
 const parsedData = ref<ParsedData | null>(null);
+const selectedFileName = ref("");
 const selectedDoctor = ref("");
 const selectedShiftDates = ref<Date[]>([]);
 const reportRows = ref<DfReportRow[]>([]);
 
+const AEK_NAME = "นายแพทย์สรวิชญ์ สอาดสุด";
+
 async function onFileSelected(file: File) {
   try {
+    selectedFileName.value = file.name;
     const data = await parseFile(file);
     parsedData.value = data;
+
+    // VIP Auto-select: if Dr. Aek exists, pick him
+    if (data.doctors.includes(AEK_NAME)) {
+      selectedDoctor.value = AEK_NAME;
+    }
+
+    // Auto-select all dates by default
+    selectedShiftDates.value = [...data.shiftDates];
+
     currentStep.value = "config";
   } catch {
     // error is already set in the composable
@@ -202,6 +238,7 @@ function generateWardReport() {
 function reset() {
   currentStep.value = "upload";
   parsedData.value = null;
+  selectedFileName.value = "";
   selectedDoctor.value = "";
   selectedShiftDates.value = [];
   reportRows.value = [];

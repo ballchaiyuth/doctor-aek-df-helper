@@ -35,6 +35,9 @@ doctor-aek-df-helper is a Nuxt 4 web application that automates Doctor Fee (DF) 
 15. Monitoring: Integrated Vercel Analytics and Speed Insights via official Nuxt modules
 16. SEO & Perf: Optimized for SPA (ssr: false), Thai language (lang="th"), and clean build logs
 17. First successful deployment to Vercel completed
+18. Smart Logic: Implemented ER fallback (214) and specific ICD-10 exceptions in `useDfCalculator.ts`
+19. UI Layout: Grouped results by Admit Date with per-date Copy buttons for Excel compatibility
+20. Data: Centralized all Excel/JSON mapping data in `assets/data/`
 
 == CRITICAL BUSINESS RULES ==
 - ER: Filter patients by selected doctor name + shift dates, map ICD-10 to billing codes from master-mapping.json

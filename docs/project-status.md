@@ -16,7 +16,8 @@
 | 5. Composables           | ✅ Done | `useExcelParser.ts`, `useDfCalculator.ts`                         |
 | 6. UI Components         | ✅ Done | Upload zone, selectors, result tables, main page                  |
 | 7. CI/CD & Monitoring    | ✅ Done | ESLint, GitHub Actions, Vercel Analytics/Speed Insights           |
-| 8. Integration & Testing | ⏳ Next | Parse fixture files in browser, verify logic                      |
+| 8. Smart Logic & UI      | ✅ Done | ER Fallback (214), Exception Mapping, Date Grouping UI            |
+| 9. Integration & Testing | ⏳ Next | Parse fixture files in browser, verify logic                      |
 
 ---
 
@@ -48,8 +49,11 @@
 - [x] CI/CD: Created **GitHub Actions** (`ci.yml`) for automated lint and build
 - [x] Monitoring: Integrated **Vercel Analytics** and **Speed Insights**
 - [x] Optimization: Enabled `ssr: false` for pure SPA performance and data privacy
-- [x] Optimization: Disabled production sourcemaps to clean up build logs
+- [x] Optimization: disabled production sourcemaps to clean up build logs
 - [x] SEO: Added `lang="th"` to HTML attributes
+- [x] **Smart Logic**: Implemented ER fallback (214) and Ward constant (213) in `useDfCalculator.ts`
+- [x] **UI Hierarchy**: Grouped results by Date with per-group Copy buttons
+- [x] Data Management: Centralized `wiset-doctor-fee-rates.csv` in `assets/data/`
 - [x] Verify dev server runs (<http://localhost:3000>)
 - [x] Copy docs/implementation-plan.md and docs/project-status.md to project
 - [x] First deployment to **Vercel** successful
