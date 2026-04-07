@@ -33,7 +33,7 @@
       >
         <div
           class="w-8 h-8 bg-current mask-[url('/icons/fa-upload.svg')] mask-contain mask-no-repeat mask-center"
-        ></div>
+        />
       </div>
     </div>
 
@@ -50,7 +50,7 @@
     >
       <div
         class="w-4 h-4 bg-app-green mask-[url('/icons/fa-circle-check.svg')] mask-contain mask-no-repeat mask-center"
-      ></div>
+      />
       <span class="text-sm font-medium text-slate-200">{{ fileName }}</span>
     </div>
   </div>

@@ -30,7 +30,7 @@
           >
             <div
               class="animate-spin w-5 h-5 bg-app-green mask-[url('/icons/fa-circle-notch.svg')] mask-contain mask-no-repeat mask-center"
-            ></div>
+            />
             <span class="text-sm text-slate-400">กำลังอ่านไฟล์...</span>
           </div>
         </div>
@@ -76,7 +76,7 @@
             >
               <div
                 class="w-5 h-5 bg-app-green mask-[url('/icons/fa-circle-check.svg')] mask-contain mask-no-repeat mask-center"
-              ></div>
+              />
             </div>
             <div>
               <p class="text-sm font-medium text-slate-200">อ่านไฟล์สำเร็จ</p>
@@ -139,7 +139,7 @@
         >
           <div
             class="w-4 h-4 bg-current mask-[url('/icons/fa-arrow-left.svg')] mask-contain mask-no-repeat mask-center"
-          ></div>
+          />
           ย้อนกลับ
         </button>
 
