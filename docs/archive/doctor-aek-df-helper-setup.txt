@@ -1,0 +1,48 @@
+Project Name: doctor-aek-df-helper
+Target User: Dr. Sorawit (Aek), Intern Physician at Wiset Chai Chan Hospital.
+Goal: Automate Doctor Fee (DF) report generation from hospital CSV/Excel exports to reduce manual work from 4 hours to <20 mins.
+
+--- TECHNICAL STACK ---
+- Framework: Nuxt 3 (Vue 3)
+- Package Manager: pnpm
+- UI Library: PrimeVue + Tailwind CSS
+- Data Processing: SheetJS (xlsx library)
+- Date Management: date-fns
+- Deployment: Vercel (Static Site, No Backend)
+
+--- CORE DATA STRUCTURE (From CSV) ---
+Important Columns to Parse:
+- Patient Name (ชื่อคนไข้)
+- HN (เลขประจำตัวผู้ป่วย)
+- Admission Date & Time (วันที่/เวลา รับคนไข้)
+- Diagnosis/ICD-10 (วินิจฉัย/รหัสโรค)
+- Attending Doctor (ชื่อแพทย์ผู้ตรวจ: "นายแพทย์สรวิชญ์ สอาดสุด")
+
+--- BUSINESS LOGIC ---
+
+[1] ER SHIFT LOGIC (24 Hours)
+- Context: Shifting happens in 3 rounds (08:00-16:00, 16:00-24:00, 24:00-08:00).
+- Logic:
+  1. Filter rows where 'Attending Doctor' matches the selected name.
+  2. Group records by the Date of the shift.
+  3. Map 'Diagnosis/ICD-10' to 'Billing Code' using a local master-mapping.json.
+  4. If the calculated total fee per round is low, the system uses a flat rate of 1,200 THB (Manual check support).
+- Output: Copyable table with [Patient Name, HN, Date, Billing Code].
+
+[2] WARD SHIFT LOGIC (08:00-16:00)
+- Context: Intern covers the ward but doesn't get paid for patients newly admitted via ER during 08:00-16:00.
+- Logic:
+  1. Filter records by Ward Shift Date.
+  2. EXCLUDE Rule: If a patient was admitted on that same date between 08:00:00 and 16:00:00, REMOVE them from the list (They belong to the ER doctor).
+  3. For all remaining patients, auto-assign Billing Code: "213".
+- Output: Copyable table with [Patient Name, HN, Date, "213"].
+
+--- MASTER DATA STRATEGY ---
+- Store a mapping JSON in 'assets/data/master-mapping.json'.
+- Example: "E110 - Non-insulin-dependent diabetes mellitus" -> "227".
+
+--- UI/UX REQUIREMENTS ---
+- Initial Screen: Drag & Drop zone for CSV/Excel file.
+- Setup Screen: Select Doctor Name and Shift Dates.
+- Result Screen: Two Tabs (ER / Ward) showing result tables with "Copy to Clipboard" buttons.
+- Clean and Simple interface using PrimeVue components.

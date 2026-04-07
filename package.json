@@ -1,0 +1,27 @@
+{
+  "name": "doctor-aek-df-helper",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@primeuix/themes": "^2.0.3",
+    "@tailwindcss/vite": "^4.2.2",
+    "csv-parse": "6.2.1",
+    "date-fns": "^4.1.0",
+    "nuxt": "^4.4.2",
+    "primevue": "^4.5.4",
+    "read-excel-file": "8.0.3",
+    "tailwindcss": "^4.2.2",
+    "vue": "^3.5.32",
+    "vue-router": "^5.0.4"
+  },
+  "devDependencies": {
+    "@primevue/nuxt-module": "^4.5.4"
+  }
+}

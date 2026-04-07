@@ -1,0 +1,92 @@
+# Doctor Aek DF Helper — Project Status
+
+**Last Updated:** 2026-04-07
+**Current Phase:** Phase 6 — UI Components ✅ → Ready for Testing
+
+---
+
+## Phase Overview
+
+| Phase                    | Status  | Description                                                       |
+| ------------------------ | ------- | ----------------------------------------------------------------- |
+| 1. Research & Analysis   | ✅ Done | Data analysis, column mapping, requirements review                |
+| 2. Implementation Plan   | ✅ Done | Plan created and approved                                         |
+| 3. Project Setup         | ✅ Done | Nuxt 4.4.2 + Tailwind v4 + PrimeVue + csv-parse + read-excel-file |
+| 4. Core Data Layer       | ✅ Done | `csv-columns.ts`, `master-mapping.json` (placeholder)             |
+| 5. Composables           | ✅ Done | `useExcelParser.ts`, `useDfCalculator.ts`                         |
+| 6. UI Components         | ✅ Done | Upload zone, selectors, result tables, main page                  |
+| 7. Integration & Testing | ⏳ Next | Parse fixture files in browser, verify logic                      |
+
+---
+
+## Completed Tasks
+
+- [x] Analyze requirements & business rules
+- [x] Analyze CSV data structure (128 cols, no headers)
+- [x] Identify column indices: AN(0), HN(7), AdmitDate(13), AdmitTime(14), ICD(107), Patient(109), Doctor(113)
+- [x] Identify row sanitization rules
+- [x] Create implementation plan
+- [x] Get user approval
+- [x] Initialize Nuxt project with pnpm
+- [x] Install dependencies: primevue, @primeuix/themes, csv-parse, read-excel-file, date-fns, @tailwindcss/vite, @primevue/nuxt-module
+- [x] Configure nuxt.config.ts (PrimeVue Aura theme, @tailwindcss/vite plugin, Inter font, SEO meta)
+- [x] Configure CSS-first theme in main.css via @theme block (replaces tailwind.config.ts)
+- [x] Fix Thai encoding for CSV parsing (UTF-8 text read before CSV parser)
+- [x] Upgrade from Nuxt 3.21.2 → 4.4.2, Tailwind v3 → v4 (CSS-first, no config file)
+- [x] Create assets/css/main.css (base styles, smooth transitions)
+- [x] Create utils/csv-columns.ts (column index constants)
+- [x] Create assets/data/master-mapping.json (placeholder ICD-10 mapping)
+- [x] Create composables/useExcelParser.ts (csv-parse and read-excel-file parsing, row sanitization)
+- [x] Create composables/useDfCalculator.ts (ER/Ward logic, clipboard copy)
+- [x] Create components: AppHeader, FileUploadZone, DoctorSelector, ShiftDateSelector, ResultTable
+- [x] Create pages/index.vue (3-step wizard: Upload → Config → Results)
+- [x] UI/UX Overhaul: Transitioned to **Graphite Dark Mode** (bg: #212529, card: #2d2d30)
+- [x] Icons: Replaced inline SVGs with lightweight **CSS Masking** icons
+- [x] IDE Support: Configured VSCode to support Tailwind v4 @theme syntax
+- [x] Verify dev server runs (http://localhost:3000)
+- [x] Copy docs/implementation-plan.md and docs/project-status.md to project
+
+---
+
+## Pending / Next Steps
+
+- [ ] Test with fixture CSV files in browser
+- [ ] Verify ER doctor filtering works correctly
+- [ ] Verify Ward 08:00-16:00 exclusion rule
+- [ ] Get full ICD-10 → Billing Code master mapping from user
+- [ ] Polish UI micro-animations
+- [ ] Add error handling edge cases
+
+---
+
+## Key Decisions Log
+
+| Date       | Decision                                              | Rationale                                                                 |
+| ---------- | ----------------------------------------------------- | ------------------------------------------------------------------------- |
+| 2026-04-06 | Column indices hardcoded as constants                 | CSV has no headers; indices stable per hospital system                    |
+| 2026-04-06 | Doctor filtering required for ER (real data is mixed) | ER fixture was pre-filtered, Ward fixture shows real-world mixed data     |
+| 2026-04-06 | csv-parse & read-excel-file                           | Switched from SheetJS to secure parsers                                   |
+| 2026-04-06 | Plan files stored in `docs/`                          | Context anchor accessible across AI model switches                        |
+| 2026-04-06 | Used @primeuix/themes instead of @primevue/themes     | The latter is deprecated                                                  |
+| 2026-04-06 | Native select instead of PrimeVue Dropdown            | Better reliability with Thai character names                              |
+| 2026-04-06 | CSV read as UTF-8 text before parsing                 | Ensure Thai characters aren't corrupted (mojibake)                        |
+| 2026-04-07 | Upgrade Nuxt 3 → 4, Tailwind v3 → v4                  | Use latest stack; Tailwind v4 CSS-first config removes tailwind.config.ts |
+| 2026-04-07 | Graphite Dark Mode & CSS Masking Icons                | Professional aesthetic, better performance, and easier color management   |
+| 2026-04-07 | VSCode tailwind-data.json fix                         | Resolution for 'Unknown at rule @theme' linting errors                    |
+
+---
+
+## Tech Stack Versions
+
+| Package           | Version |
+| ----------------- | ------- |
+| Nuxt              | 4.4.2   |
+| Vue               | 3.5.32  |
+| PrimeVue          | 4.5.4   |
+| @primeuix/themes  | 2.0.3   |
+| Tailwind CSS      | 4.2.2   |
+| @tailwindcss/vite | 4.2.2   |
+| csv-parse         | 6.2.1   |
+| read-excel-file   | 8.0.3   |
+| date-fns          | 4.1.0   |
+| Vite              | 7.3.2   |

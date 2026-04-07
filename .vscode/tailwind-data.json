@@ -1,0 +1,21 @@
+{
+  "version": 1.1,
+  "atDirectives": [
+    {
+      "name": "@theme",
+      "description": "Tailwind CSS v4 theme configuration block."
+    },
+    {
+      "name": "@plugin",
+      "description": "Tailwind plugin registration."
+    },
+    {
+      "name": "@utility",
+      "description": "Tailwind utility registration."
+    },
+    {
+      "name": "@custom-variant",
+      "description": "Tailwind custom variant registration."
+    }
+  ]
+}
