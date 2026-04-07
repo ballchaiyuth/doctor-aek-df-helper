@@ -22,7 +22,7 @@
       >
         <div
           class="w-4 h-4 bg-current mask-[url('/icons/fa-copy.svg')] mask-contain mask-no-repeat mask-center"
-        ></div>
+        />
         {{ copied ? "คัดลอกแล้ว ✓" : "คัดลอกทั้งหมด" }}
       </button>
     </div>

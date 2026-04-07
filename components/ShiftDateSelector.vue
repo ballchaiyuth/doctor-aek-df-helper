@@ -19,7 +19,7 @@
           :checked="isSelected(date)"
           class="w-4 h-4 text-app-green rounded border-app-surface bg-app-bg focus:ring-app-green focus:ring-offset-app-bg"
           @change="toggleDate(date)"
-        />
+        >
         <span class="text-sm font-medium text-slate-200">
           {{ formatDateDisplay(date) }}
         </span>
