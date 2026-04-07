@@ -22,13 +22,22 @@ doctor-aek-df-helper is a Nuxt 4 web application that automates Doctor Fee (DF) 
 3. Column indices identified and hardcoded in utils/csv-columns.ts:
    - AN (Col 0), HN (Col 7), Admit Date (Col 13), Admit Time (Col 14), ICD-10 Code (Col 107), Patient Name (Col 109), Attending Doctor (Col 113)
 4. Row sanitization implemented — skips date header rows, empty separator rows, validates data rows by numeric AN
-5. Thai encoding fix applied — CSV files are read as UTF-8 text (FileReader.readAsText) before passing to SheetJS to prevent mojibake
-6. composables/useExcelParser.ts — file parsing with SheetJS, doctor extraction, shift date extraction
+5. Thai encoding fix applied — CSV files are read as UTF-8 text (FileReader.readAsText) before passing to CSV parser to prevent mojibake
+6. composables/useExcelParser.ts — file parsing with csv-parse and read-excel-file, doctor extraction
 7. composables/useDfCalculator.ts — ER (filter by doctor + map ICD-10) and Ward (exclude 08:00-16:00 same-day admits) logic
 8. UI components built: AppHeader, FileUploadZone, DoctorSelector, ShiftDateSelector, ResultTable
 9. pages/index.vue — 3-step wizard (Upload → Configure with ER/Ward tabs → Results with copy button)
 10. Tailwind v4 CSS-first config in assets/css/main.css using @theme block (no tailwind.config.ts needed)
 11. Dev server verified running at http://localhost:3000
+12. UI/UX Polishing: Transitioned to Graphite Dark Mode + CSS Masking Icons
+13. Infrastructure: Configured ESLint v9 (Flat Config) with @nuxt/eslint and TS support
+14. CI/CD: Established GitHub Actions (ci.yml) for automated code quality checks
+15. Monitoring: Integrated Vercel Analytics and Speed Insights via official Nuxt modules
+16. SEO & Perf: Optimized for SPA (ssr: false), Thai language (lang="th"), and clean build logs
+17. First successful deployment to Vercel completed
+18. Smart Logic: Implemented ER fallback (214) and specific ICD-10 exceptions in `useDfCalculator.ts`
+19. UI Layout: Grouped results by Admit Date with per-date Copy buttons for Excel compatibility
+20. Data: Centralized all Excel/JSON mapping data in `assets/data/`
 
 == CRITICAL BUSINESS RULES ==
 - ER: Filter patients by selected doctor name + shift dates, map ICD-10 to billing codes from master-mapping.json
@@ -39,8 +48,9 @@ doctor-aek-df-helper is a Nuxt 4 web application that automates Doctor Fee (DF) 
 1. .agents/workflows/standards.md — Dev standards (MUST follow: English code, Thai summary, logic in composables, no backend)
 2. docs/implementation-plan.md — Full technical plan with column mapping table and business logic detail
 3. docs/project-status.md — Current progress, decisions log, tech versions
-4. nuxt.config.ts — Nuxt 4 config with @tailwindcss/vite plugin, PrimeVue Aura theme, Vite optimizeDeps
-5. assets/css/main.css — Tailwind v4 CSS-first theme config using @theme block
+4. nuxt.config.ts — Nuxt 4 config with Monitoring, SEO, and SPA settings
+5. assets/css/main.css — Tailwind v4 CSS-first theme config (@theme block)
+6. eslint.config.mjs — ESLint v9 Flat Config
 
 == WHAT REMAINS TO BE DONE ==
 1. TEST with real fixture data — upload tests/fixtures/2025-11-ER-Raw.csv and tests/fixtures/2025-11-Ward-Raw.csv via the browser to verify:
@@ -54,7 +64,6 @@ doctor-aek-df-helper is a Nuxt 4 web application that automates Doctor Fee (DF) 
    - Should the app calculate and display when fee falls below 1,200 THB flat rate?
    - Confirm Col[7] is the correct HN field
 4. POLISH the UI — micro-animations, error edge cases, empty states
-5. DEPLOY to Vercel
 
 == KNOWN ISSUES ==
 - The ER fixture file (2025-11-ER-Raw.csv) was pre-filtered to only contain one doctor's data. Real-world ER files will have MANY doctors mixed in.

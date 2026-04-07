@@ -15,7 +15,9 @@
 | 4. Core Data Layer       | ✅ Done | `csv-columns.ts`, `master-mapping.json` (placeholder)             |
 | 5. Composables           | ✅ Done | `useExcelParser.ts`, `useDfCalculator.ts`                         |
 | 6. UI Components         | ✅ Done | Upload zone, selectors, result tables, main page                  |
-| 7. Integration & Testing | ⏳ Next | Parse fixture files in browser, verify logic                      |
+| 7. CI/CD & Monitoring    | ✅ Done | ESLint, GitHub Actions, Vercel Analytics/Speed Insights           |
+| 8. Smart Logic & UI      | ✅ Done | ER Fallback (214), Exception Mapping, Date Grouping UI            |
+| 9. Integration & Testing | ⏳ Next | Parse fixture files in browser, verify logic                      |
 
 ---
 
@@ -43,8 +45,18 @@
 - [x] UI/UX Overhaul: Transitioned to **Graphite Dark Mode** (bg: #212529, card: #2d2d30)
 - [x] Icons: Replaced inline SVGs with lightweight **CSS Masking** icons
 - [x] IDE Support: Configured VSCode to support Tailwind v4 @theme syntax
-- [x] Verify dev server runs (http://localhost:3000)
+- [x] Infrastructure: Configured **ESLint v9 (Flat Config)** with `@nuxt/eslint`
+- [x] CI/CD: Created **GitHub Actions** (`ci.yml`) for automated lint and build
+- [x] Monitoring: Integrated **Vercel Analytics** and **Speed Insights**
+- [x] Optimization: Enabled `ssr: false` for pure SPA performance and data privacy
+- [x] Optimization: disabled production sourcemaps to clean up build logs
+- [x] SEO: Added `lang="th"` to HTML attributes
+- [x] **Smart Logic**: Implemented ER fallback (214) and Ward constant (213) in `useDfCalculator.ts`
+- [x] **UI Hierarchy**: Grouped results by Date with per-group Copy buttons
+- [x] Data Management: Centralized `wiset-doctor-fee-rates.csv` in `assets/data/`
+- [x] Verify dev server runs (<http://localhost:3000>)
 - [x] Copy docs/implementation-plan.md and docs/project-status.md to project
+- [x] First deployment to **Vercel** successful
 
 ---
 
@@ -73,6 +85,11 @@
 | 2026-04-07 | Upgrade Nuxt 3 → 4, Tailwind v3 → v4                  | Use latest stack; Tailwind v4 CSS-first config removes tailwind.config.ts |
 | 2026-04-07 | Graphite Dark Mode & CSS Masking Icons                | Professional aesthetic, better performance, and easier color management   |
 | 2026-04-07 | VSCode tailwind-data.json fix                         | Resolution for 'Unknown at rule @theme' linting errors                    |
+| 2026-04-07 | ESLint Flat Config & @nuxt/eslint                     | Future-proof linting for Nuxt 4 SFCs and TypeScript                       |
+| 2026-04-07 | GitHub Actions (CI) on push/PR                        | Ensure code quality and build stability before merging                    |
+| 2026-04-07 | Vercel Analytics & Speed Insights via Modules         | Official integration for performance tracking and user analytics          |
+| 2026-04-07 | SSR: false (Pure SPA)                                 | Hospital data privacy (no server processing) and faster interactions      |
+| 2026-04-07 | Disabled Build Sourcemaps                             | Fix Tailwind v4 Vite plugin warnings and reduce build size                |
 
 ---
 
@@ -82,10 +99,13 @@
 | ----------------- | ------- |
 | Nuxt              | 4.4.2   |
 | Vue               | 3.5.32  |
+| pnpm              | 10.33.0 |
+| Node.js           | 22.x    |
 | PrimeVue          | 4.5.4   |
 | @primeuix/themes  | 2.0.3   |
 | Tailwind CSS      | 4.2.2   |
 | @tailwindcss/vite | 4.2.2   |
+| @nuxt/eslint      | 1.0.1   |
 | csv-parse         | 6.2.1   |
 | read-excel-file   | 8.0.3   |
 | date-fns          | 4.1.0   |

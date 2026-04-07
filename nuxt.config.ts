@@ -3,15 +3,24 @@ import Aura from "@primeuix/themes/aura";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineNuxtConfig({
-  compatibilityDate: "2025-07-15",
+  compatibilityDate: "2026-04-07",
   devtools: { enabled: true },
+  ssr: false, // Pure client-side tool for best performance and privacy
 
-  modules: ["@primevue/nuxt-module", "@nuxt/eslint"],
+  modules: [
+    "@primevue/nuxt-module",
+    "@nuxt/eslint",
+    "@vercel/analytics/nuxt",
+    "@vercel/speed-insights/nuxt",
+  ],
 
   css: ["@/assets/css/main.css"],
 
   vite: {
     plugins: [tailwindcss()],
+    build: {
+      sourcemap: false,
+    },
     optimizeDeps: {
       include: [
         "date-fns",
@@ -35,6 +44,9 @@ export default defineNuxtConfig({
 
   app: {
     head: {
+      htmlAttrs: {
+        lang: "th",
+      },
       title: "Doctor Aek DF Helper",
       meta: [
         { charset: "utf-8" },
