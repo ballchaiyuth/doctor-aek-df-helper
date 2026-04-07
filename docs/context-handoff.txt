@@ -38,6 +38,7 @@ doctor-aek-df-helper is a Nuxt 4 web application that automates Doctor Fee (DF) 
 18. Smart Logic: Implemented ER fallback (214) and specific ICD-10 exceptions in `useDfCalculator.ts`
 19. UI Layout: Grouped results by Admit Date with per-date Copy buttons for Excel compatibility
 20. Data: Centralized all Excel/JSON mapping data in `assets/data/`
+21. Debugging: Added comprehensive `console.debug` telemetry and native `Date` object support to the Excel parser to resolve reading issues from `.xlsx` files.
 
 == CRITICAL BUSINESS RULES ==
 - ER: Filter patients by selected doctor name + shift dates, map ICD-10 to billing codes from master-mapping.json
@@ -53,10 +54,10 @@ doctor-aek-df-helper is a Nuxt 4 web application that automates Doctor Fee (DF) 
 6. eslint.config.mjs — ESLint v9 Flat Config
 
 == WHAT REMAINS TO BE DONE ==
-1. TEST with real fixture data — upload tests/fixtures/2025-11-ER-Raw.csv and tests/fixtures/2025-11-Ward-Raw.csv via the browser to verify:
-   - Thai text (doctor names, patient names) renders correctly after the UTF-8 fix
-   - ER doctor filtering works (multiple doctors in real data)
-   - Ward 08:00-16:00 exclusion rule works correctly
+1. TEST with real fixture data — upload `tests/fixtures/2025-11-ER-Raw.csv` and `tests/fixtures/2025-11-Ward-Raw.csv` (or `.xlsx`) via the browser to verify:
+   - Thai text (doctor names, patient names) renders correctly
+   - ER/Ward doctor filtering works for mixed data
+   - Ward 08:00-16:00 same-day admission exclusion logic is accurate
    - Copy-to-clipboard produces correct tab-separated output
 2. GET the full ICD-10 → Billing Code master mapping table from the user — currently assets/data/master-mapping.json has placeholders (most codes default to "213")
 3. RESOLVE open questions:

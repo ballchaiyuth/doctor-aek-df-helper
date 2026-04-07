@@ -27,6 +27,7 @@ export default defineNuxtConfig({
         "date-fns/locale",
         "csv-parse/sync",
         "read-excel-file/browser",
+        "csv-parse/browser/esm",
       ],
     },
   },

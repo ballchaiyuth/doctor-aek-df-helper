@@ -1,23 +1,23 @@
 # Doctor Aek DF Helper — Project Status
 
 **Last Updated:** 2026-04-07
-**Current Phase:** Phase 6 — UI Components ✅ → Ready for Testing
+**Current Phase:** Phase 9 — Integration & Testing [/] → In Progress
 
 ---
 
 ## Phase Overview
 
-| Phase                    | Status  | Description                                                       |
-| ------------------------ | ------- | ----------------------------------------------------------------- |
-| 1. Research & Analysis   | ✅ Done | Data analysis, column mapping, requirements review                |
-| 2. Implementation Plan   | ✅ Done | Plan created and approved                                         |
-| 3. Project Setup         | ✅ Done | Nuxt 4.4.2 + Tailwind v4 + PrimeVue + csv-parse + read-excel-file |
-| 4. Core Data Layer       | ✅ Done | `csv-columns.ts`, `master-mapping.json` (placeholder)             |
-| 5. Composables           | ✅ Done | `useExcelParser.ts`, `useDfCalculator.ts`                         |
-| 6. UI Components         | ✅ Done | Upload zone, selectors, result tables, main page                  |
-| 7. CI/CD & Monitoring    | ✅ Done | ESLint, GitHub Actions, Vercel Analytics/Speed Insights           |
-| 8. Smart Logic & UI      | ✅ Done | ER Fallback (214), Exception Mapping, Date Grouping UI            |
-| 9. Integration & Testing | ⏳ Next | Parse fixture files in browser, verify logic                      |
+| Phase                    | Status          | Description                                                       |
+| ------------------------ | --------------- | ----------------------------------------------------------------- |
+| 1. Research & Analysis   | ✅ Done         | Data analysis, column mapping, requirements review                |
+| 2. Implementation Plan   | ✅ Done         | Plan created and approved                                         |
+| 3. Project Setup         | ✅ Done         | Nuxt 4.4.2 + Tailwind v4 + PrimeVue + csv-parse + read-excel-file |
+| 4. Core Data Layer       | ✅ Done         | `csv-columns.ts`, `master-mapping.json` (placeholder)             |
+| 5. Composables           | ✅ Done         | `useExcelParser.ts`, `useDfCalculator.ts`                         |
+| 6. UI Components         | ✅ Done         | Upload zone, selectors, result tables, main page                  |
+| 7. CI/CD & Monitoring    | ✅ Done         | ESLint, GitHub Actions, Vercel Analytics/Speed Insights           |
+| 8. Smart Logic & UI      | ✅ Done         | ER Fallback (214), Exception Mapping, Date Grouping UI            |
+| 9. Integration & Testing | [/] In Progress | Parse fixture files in browser, verify logic, fix edge cases      |
 
 ---
 
@@ -57,14 +57,17 @@
 - [x] Verify dev server runs (<http://localhost:3000>)
 - [x] Copy docs/implementation-plan.md and docs/project-status.md to project
 - [x] First deployment to **Vercel** successful
+- [x] **Excel Parser Fix**: Resolved issue where native `Date` objects from `read-excel-file` caused parsing failures
+- [x] **Debug Logging**: Added comprehensive `console.debug` telemetry to `useExcelParser.ts` for easier troubleshooting
+- [x] **Ward Logic Fix**: Corrected same-day admission exclusion window (08:00-16:00) to accurately separate ER from Ward cases
 
 ---
 
 ## Pending / Next Steps
 
-- [ ] Test with fixture CSV files in browser
-- [ ] Verify ER doctor filtering works correctly
-- [ ] Verify Ward 08:00-16:00 exclusion rule
+- [x] Test with fixture CSV files in browser
+- [x] Verify Ward 08:00-16:00 exclusion rule
+- [ ] Verify ER doctor filtering works correctly for mixed data
 - [ ] Get full ICD-10 → Billing Code master mapping from user
 - [ ] Polish UI micro-animations
 - [ ] Add error handling edge cases
@@ -90,6 +93,8 @@
 | 2026-04-07 | Vercel Analytics & Speed Insights via Modules         | Official integration for performance tracking and user analytics          |
 | 2026-04-07 | SSR: false (Pure SPA)                                 | Hospital data privacy (no server processing) and faster interactions      |
 | 2026-04-07 | Disabled Build Sourcemaps                             | Fix Tailwind v4 Vite plugin warnings and reduce build size                |
+| 2026-04-07 | Native Date Object Support in Excel Parser            | `read-excel-file` auto-converts dates; now handled in `parseDate`         |
+| 2026-04-07 | Comprehensive Parser Telemetry                        | Console logging for every step (header/data detection) to aid debugging   |
 
 ---
 
