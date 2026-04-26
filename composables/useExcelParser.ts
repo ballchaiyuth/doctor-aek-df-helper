@@ -42,19 +42,45 @@ export function useExcelParser() {
       return isValid(dateVal) ? dateVal : null;
     }
 
-    const cleaned = String(dateVal).trim();
-    if (!cleaned) return null;
+    if (typeof dateVal === "string") {
+      const cleaned = dateVal.trim();
+      const today = new Date();
+      const currentYear = today.getFullYear();
 
-    // Try d/M/yyyy first (Thai hospital format used in CSV)
-    const parsed = parse(cleaned, "d/M/yyyy", new Date());
-    if (isValid(parsed)) return parsed;
+      // Case 1: Full date (d/M/yyyy)
+      let parsed = parse(cleaned, "d/M/yyyy", new Date());
+      if (isValid(parsed)) return parsed;
+
+      // Case 2: Short year (d/M/yy) - e.g. 23/11/25
+      parsed = parse(cleaned, "d/M/yy", new Date());
+      if (isValid(parsed)) return parsed;
+
+      // Case 3: Missing year (d/M) - e.g. 23/11
+      const dayMonthMatch = cleaned.match(/^(\d{1,2})\/(\d{1,2})$/);
+      if (dayMonthMatch) {
+        const d = dayMonthMatch[1];
+        const m = dayMonthMatch[2];
+        // Try current year first
+        let guessed = parse(`${d}/${m}/${currentYear}`, "d/M/yyyy", new Date());
+        // If the guessed date is in the future (> 1 month from now), it's likely last year's data
+        // (common in medical billing which is often retrospective)
+        if (guessed.getTime() > today.getTime() + 30 * 24 * 60 * 60 * 1000) {
+          guessed = parse(
+            `${d}/${m}/${currentYear - 1}`,
+            "d/M/yyyy",
+            new Date(),
+          );
+        }
+        if (isValid(guessed)) return guessed;
+      }
+    }
 
     // Fallback: try other common formats
-    const fallback = parse(cleaned, "dd/MM/yyyy", new Date());
+    const fallback = parse(String(dateVal).trim(), "dd/MM/yyyy", new Date());
     if (isValid(fallback)) return fallback;
 
     // Fallback 2: try standard ISO or native JS parsing
-    const res = new Date(cleaned);
+    const res = new Date(String(dateVal).trim());
     if (isValid(res)) return res;
 
     return null;
@@ -73,6 +99,23 @@ export function useExcelParser() {
     const combined = new Date(date);
     combined.setHours(hours, minutes, seconds, 0);
     return combined;
+  }
+
+  /**
+   * Safely format time value from either string or Excel Date object.
+   * Handles Excel's 1899 epoch shift by using UTC methods.
+   */
+  function formatTime(val: unknown): string {
+    if (!val) return "";
+    if (val instanceof Date) {
+      // If year is 1899 or 1900, it's likely an Excel time-only cell.
+      // Use UTC to avoid historical timezone shifts (like GMT+6:42 in Bangkok 1899).
+      const h = val.getUTCHours().toString().padStart(2, "0");
+      const m = val.getUTCMinutes().toString().padStart(2, "0");
+      const s = val.getUTCSeconds().toString().padStart(2, "0");
+      return `${h}:${m}:${s}`;
+    }
+    return String(val).trim();
   }
 
   /**
@@ -138,8 +181,7 @@ export function useExcelParser() {
         const nonEmpty = row.filter(
           (cell) => String(cell ?? "").trim().length > 0,
         );
-        const dateStr = String(nonEmpty[0]).trim();
-        const date = parseDate(dateStr);
+        const date = parseDate(nonEmpty[0]);
         if (date) dates.push(date);
       }
     }
@@ -154,11 +196,11 @@ export function useExcelParser() {
     row: unknown[],
     roundingDate: Date,
   ): PatientRecord | null {
-    const admitDateStr = String(row[CSV_COL.ADMIT_DATE] ?? "").trim();
-    const admitDate = parseDate(admitDateStr);
+    const rawAdmitDate = row[CSV_COL.ADMIT_DATE];
+    const admitDate = parseDate(rawAdmitDate);
     if (!admitDate) return null;
 
-    const admitTime = String(row[CSV_COL.ADMIT_TIME] ?? "").trim();
+    const admitTime = formatTime(row[CSV_COL.ADMIT_TIME]);
     const admitDateTime = parseDateTime(admitDate, admitTime);
 
     return {

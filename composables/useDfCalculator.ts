@@ -5,17 +5,41 @@ import {
   WARD_EXCLUDE_END_MINUTES,
   WARD_EXCLUDE_START_MINUTES,
 } from "@/utils/csv-columns";
+import { getFee } from "@/utils/fee-rates";
 import { isSameDay } from "date-fns";
 
 export interface DfReportRow {
-  an: string; // Sequential Admission Number for correct sorting
+  an: string;
   patientName: string;
   hn: string;
-  admitDate: string; // The actual admit date from CSV (e.g., 8/10/2025)
-  roundingDate: string; // The shift date from section header (e.g., 2/11/2025)
+  admitDate: string;
+  admitTime: string;
+  roundingDate: string;
   billingCode: string;
   icdCode: string;
   icdDescription: string;
+  chiefComplaint: string;
+  attendingDoctor: string;
+  fee: number;
+  isExcluded?: boolean;
+  isIncorrect?: boolean;
+  manualBillingCode?: string;
+}
+
+export interface ShiftRevenue {
+  label: string; // "08:00 - 15:59", etc.
+  count: number;
+  subtotal: number;
+  isBelowMinimum: boolean;
+  claimText: string;
+  startMin: number;
+  endMin: number;
+}
+
+export interface RevenueSummary {
+  total: number;
+  smartTotal: number;
+  shifts: ShiftRevenue[];
 }
 
 /**
@@ -59,35 +83,19 @@ export function useDfCalculator() {
         patientName: r.patientName,
         hn: r.hn,
         admitDate: formatDate(r.admitDate),
+        admitTime: r.admitTime,
         roundingDate: formatDate(r.roundingDate),
         billingCode: lookupERBillingCode(r.icdCode),
         icdCode: r.icdCode,
         icdDescription: r.icdDescription,
+        chiefComplaint: r.chiefComplaint,
+        attendingDoctor: r.attendingDoctor,
+        fee: getFee(lookupERBillingCode(r.icdCode)),
       }));
   }
 
   /**
-   * Check if a patient should be EXCLUDED from Ward DF.
-   * Patients admitted on the shift day between 08:00-16:00 belong to ER doctor.
-   */
-  function isExcludedFromWard(record: PatientRecord, shiftDate: Date): boolean {
-    // Check if admitted on the SAME DAY as the rounding shift
-    if (!isSameDay(record.admitDate, shiftDate)) return false;
-
-    const hours = record.admitDateTime.getHours();
-    const minutes = record.admitDateTime.getMinutes();
-    const totalMinutes = hours * 60 + minutes;
-
-    return (
-      totalMinutes >= WARD_EXCLUDE_START_MINUTES &&
-      totalMinutes < WARD_EXCLUDE_END_MINUTES
-    );
-  }
-
-  /**
-   * Ward Logic: Get all patients for the shift dates,
-   * EXCLUDE those admitted 08:00-16:00 on the same day,
-   * then auto-assign billing code "213".
+   * Ward Logic: Get all patients for the shift dates, excluding certain admits.
    */
   function calculateWard(
     records: PatientRecord[],
@@ -95,26 +103,28 @@ export function useDfCalculator() {
   ): DfReportRow[] {
     const results: DfReportRow[] = [];
 
-    // We iterate by shift dates to group data by the day Dr. Aek rounded the ward
     for (const shiftDate of shiftDates) {
-      // Find all records that belong to this shift section in the CSV
       const dayRecords = records.filter((r) =>
         isSameDay(r.roundingDate, shiftDate),
       );
 
       for (const record of dayRecords) {
-        // EXCLUDE if admitted on this shiftDate between 08:00-16:00
-        if (isExcludedFromWard(record, shiftDate)) continue;
+        const isExcluded = isExcludedFromWard(record, shiftDate);
+        if (isExcluded) continue;
 
         results.push({
           an: record.an,
           patientName: record.patientName,
           hn: record.hn,
           admitDate: formatDate(record.admitDate),
+          admitTime: record.admitTime,
           roundingDate: formatDate(record.roundingDate),
           billingCode: WARD_BILLING_CODE,
           icdCode: record.icdCode,
           icdDescription: record.icdDescription,
+          chiefComplaint: record.chiefComplaint,
+          attendingDoctor: record.attendingDoctor,
+          fee: 50,
         });
       }
     }
@@ -123,20 +133,163 @@ export function useDfCalculator() {
   }
 
   /**
-   * Generate a tab-separated string for clipboard copy.
-   * Format: PatientName \t HN \t Date \t BillingCode
+   * Check if a patient should be EXCLUDED from Ward DF.
    */
-  function toClipboardText(rows: DfReportRow[]): string {
+  function isExcludedFromWard(record: PatientRecord, shiftDate: Date): boolean {
+    if (!isSameDay(record.admitDate, shiftDate)) return false;
+
+    const timeParts = (record.admitTime || "0:0").split(":");
+    const h = parseInt(timeParts[0] || "0", 10);
+    const m = parseInt(timeParts[1] || "0", 10);
+    const totalMinutes = h * 60 + m;
+
+    return (
+      totalMinutes >= WARD_EXCLUDE_START_MINUTES &&
+      totalMinutes < WARD_EXCLUDE_END_MINUTES
+    );
+  }
+
+  /**
+   * Calculate summary and ER shift-based minimums.
+   */
+  function calculateRevenueSummary(
+    rows: DfReportRow[],
+    mode: "er" | "ward",
+  ): RevenueSummary {
+    if (mode === "ward") {
+      const total = rows.reduce((sum, r) => sum + r.fee, 0);
+      return { total, smartTotal: total, shifts: [] };
+    }
+
+    // Group rows by date for more accurate daily shift calculation
+    const rowsByDate: Record<string, DfReportRow[]> = {};
+    for (const row of rows) {
+      let group = rowsByDate[row.roundingDate];
+      if (!group) {
+        group = [];
+        rowsByDate[row.roundingDate] = group;
+      }
+      group.push(row);
+    }
+
+    let globalTotal = 0;
+    let globalSmartTotal = 0;
+
+    // To maintain compatibility with the "shifts" display (if ever needed globally),
+    // we'll still keep track of shift-level stats for the whole set.
+    const globalShifts: ShiftRevenue[] = [
+      {
+        label: "08:00 - 15:59",
+        count: 0,
+        subtotal: 0,
+        isBelowMinimum: false,
+        claimText: "",
+        startMin: 8 * 60,
+        endMin: 16 * 60,
+      },
+      {
+        label: "16:00 - 23:59",
+        count: 0,
+        subtotal: 0,
+        isBelowMinimum: false,
+        claimText: "",
+        startMin: 16 * 60,
+        endMin: 24 * 60,
+      },
+      {
+        label: "00:00 - 07:59",
+        count: 0,
+        subtotal: 0,
+        isBelowMinimum: false,
+        claimText: "",
+        startMin: 0,
+        endMin: 8 * 60,
+      },
+    ];
+
+    for (const date in rowsByDate) {
+      const dayRows = rowsByDate[date];
+      if (!dayRows) continue;
+
+      // Calculate 3 shifts for THIS day
+      const dayShifts = [
+        { subtotal: 0, startMin: 8 * 60, endMin: 16 * 60 },
+        { subtotal: 0, startMin: 16 * 60, endMin: 24 * 60 },
+        { subtotal: 0, startMin: 0, endMin: 8 * 60 },
+      ];
+
+      for (const row of dayRows) {
+        const timeParts = (row.admitTime || "0:0").split(":");
+        const h = parseInt(timeParts[0] || "0", 10);
+        const m = parseInt(timeParts[1] || "0", 10);
+        const t = h * 60 + m;
+
+        // Add to global buckets for reference
+        const gShift = globalShifts.find(
+          (s) => t >= s.startMin && t < s.endMin,
+        );
+        if (gShift) {
+          gShift.count++;
+          gShift.subtotal += row.fee;
+        }
+
+        // Add to day-specific buckets for smart calculation
+        const dShift = dayShifts.find((s) => t >= s.startMin && t < s.endMin);
+        if (dShift) dShift.subtotal += row.fee;
+      }
+
+      // Add each day's smart revenue to the global total
+      for (const s of dayShifts) {
+        globalTotal += s.subtotal;
+        globalSmartTotal += Math.max(1200, s.subtotal);
+      }
+    }
+
+    const dayCount = Object.keys(rowsByDate).length;
+    return {
+      total: globalTotal,
+      smartTotal: globalSmartTotal,
+      shifts: globalShifts.map((s) => ({
+        ...s,
+        isBelowMinimum: s.subtotal < 1200 * dayCount,
+        claimText:
+          s.subtotal < 1200 * dayCount
+            ? `รับอัตราค่าตอบแทนปกติตามข้อ 1 จำนวน ${dayCount} เวร`
+            : "",
+      })),
+    };
+  }
+
+  /**
+   * Convert rows to a string suitable for copying to clipboard.
+   */
+  function toClipboardText(
+    rows: DfReportRow[],
+    options: { includeDetails?: boolean } = {},
+  ): string {
     return rows
-      .map((r) => `${r.patientName}\t${r.hn}\t${r.admitDate}\t${r.billingCode}`)
+      .map((row) => {
+        const parts = [
+          row.patientName,
+          row.hn,
+          row.admitDate,
+          row.manualBillingCode || row.billingCode,
+        ];
+
+        if (options.includeDetails) {
+          if (row.chiefComplaint) parts.push(`CC: ${row.chiefComplaint}`);
+          parts.push(`${row.icdCode} - ${row.icdDescription}`);
+        }
+
+        return parts.join("\t");
+      })
       .join("\n");
   }
 
   return {
     calculateER,
     calculateWard,
-    lookupERBillingCode,
-    isExcludedFromWard,
+    calculateRevenueSummary,
     toClipboardText,
     formatDate,
   };

@@ -33,3 +33,25 @@ Adhere strictly to these core standards to ensure the application remains lightw
 ## 5. Communication Standards
 
 - **Thai Summary Indicator:** At the end of every response, provide a brief, clear summary in **Thai (สรุปสั้นๆ)**. Focus on what was implemented or changed so the user can review quickly.
+
+## 6. Commit Message Standards
+
+Ensure a concise and clean Git history. Focus on brevity and clarity.
+
+- **Format:** One-line summary (commit message) followed by bullet points (description).
+- **No Long-Windedness:** Keep point explanations minimal.
+- **AI Rule:** The AI provides the commit text; the **USER** manually performs the commit/push.
+
+**Example:**
+
+```text
+feat(ball): setup CI workflow and linting configuration
+
+- add @nuxt/eslint and configure eslint.config.mjs
+- setup GitHub Actions CI for automated lint and build checks
+- fix minor linting issues and adjust self-closing rules for void elements
+```
+
+---
+
+_Summary in Thai:_ **สรุปสั้นๆ:** อัปเดตมาตรฐานการเขียน Commit Message ให้กระชับและเป็นระเบียบตามรูปแบบที่คุณ Ball ต้องการเรียบร้อยแล้วครับ!

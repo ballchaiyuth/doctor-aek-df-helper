@@ -1,76 +1,38 @@
 == CONTEXT HANDOFF: Doctor Aek DF Helper ==
-Date: 2026-04-07
+Date: 2026-04-26
 
 == WHAT IS THIS PROJECT ==
-doctor-aek-df-helper is a Nuxt 4 web application that automates Doctor Fee (DF) report generation for Dr. Sorawit (Aek), an intern doctor at Wiset Chai Chan Hospital. The app parses hospital CSV/Excel exports, applies ER/Ward business logic, maps ICD-10 codes to billing codes, and produces copyable report tables for the doctor to paste into the hospital billing system.
-
-== TECH STACK ==
-- Framework: Nuxt 4.4.2 (Vue 3.5.32)
-- Styling: Tailwind CSS 4.2.2 via @tailwindcss/vite plugin (CSS-first config, NO tailwind.config.ts)
-- UI Components: PrimeVue 4.5.4 (Aura theme via @primeuix/themes)
-- Design System: Graphite Dark Mode (Custom theme using Tailwind v4 @layer base)
-- Data Processing: csv-parse 6.2.1 and read-excel-file 8.0.3
-- Icons: FontAwesome SVGs via CSS Masking (mask-image)
-- Date Logic: date-fns 4.1.0
-- Build: Vite 7.3.2
-- Package Manager: pnpm
-- Deployment Target: Vercel (Static Site, No Backend — all data stays in client browser)
+doctor-aek-df-helper is a Nuxt 4 web application that automates Doctor Fee (DF) report generation for Dr. Sorawit (Aek), an intern doctor at Wiset Chai Chan Hospital.
 
 == WHAT HAS BEEN DONE ==
-1. Project initialized with Nuxt 4 (upgraded from 3.21.2), all dependencies installed
-2. CSV data analysis complete — hospital files have NO headers, 128 columns, fixed structure
-3. Column indices identified and hardcoded in utils/csv-columns.ts:
-   - AN (Col 0), HN (Col 7), Admit Date (Col 13), Admit Time (Col 14), ICD-10 Code (Col 107), Patient Name (Col 109), Attending Doctor (Col 113)
-4. Row sanitization implemented — skips date header rows, empty separator rows, validates data rows by numeric AN
-5. Thai encoding fix applied — CSV files are read as UTF-8 text (FileReader.readAsText) before passing to CSV parser to prevent mojibake
-6. composables/useExcelParser.ts — file parsing with csv-parse and read-excel-file, doctor extraction
-7. composables/useDfCalculator.ts — ER (filter by doctor + map ICD-10) and Ward (exclude 08:00-16:00 same-day admits) logic
-8. UI components built: AppHeader, FileUploadZone, DoctorSelector, ShiftDateSelector, ResultTable
-9. pages/index.vue — 3-step wizard (Upload → Configure with ER/Ward tabs → Results with copy button)
-10. Tailwind v4 CSS-first config in assets/css/main.css using @theme block (no tailwind.config.ts needed)
-11. Dev server verified running at http://localhost:3000
-12. UI/UX Polishing: Transitioned to Graphite Dark Mode + CSS Masking Icons
-13. Infrastructure: Configured ESLint v9 (Flat Config) with @nuxt/eslint and TS support
-14. CI/CD: Established GitHub Actions (ci.yml) for automated code quality checks
-15. Monitoring: Integrated Vercel Analytics and Speed Insights via official Nuxt modules
-16. SEO & Perf: Optimized for SPA (ssr: false), Thai language (lang="th"), and clean build logs
-17. First successful deployment to Vercel completed
-18. Smart Logic: Implemented ER fallback (214) and specific ICD-10 exceptions in `useDfCalculator.ts`
-19. UI Layout: Grouped results by Admit Date with per-date Copy buttons for Excel compatibility
-20. Data: Centralized all Excel/JSON mapping data in `assets/data/`
-21. Debugging: Added comprehensive `console.debug` telemetry and native `Date` object support to the Excel parser to resolve reading issues from `.xlsx` files.
+1.  Project initialized with Nuxt 4, Tailwind v4, and PrimeVue.
+2.  CSV/Excel parsing logic with Thai encoding support.
+3.  ER Logic: Grouping by 3 shifts (08-16, 16-24, 24-08).
+4.  Ward Logic: Automation of 08:00-16:00 same-day admission exclusion.
+5.  **Smart Copy (ER)**: Intelligent clipboard function that consolidates low-fee shifts into claim text while preserving raw data for high-fee shifts.
+6.  **Executive Dashboard**: Stat cards for Total Patients, Working Days, and Estimated Real Income.
+7.  **Smart Revenue**: Calculation of Grand Total including 1,200 THB minimums per ER shift.
+8.  **Ward Daily Totals**: Integrated revenue summaries after each day's rounding list.
+9.  **Excel v9 & 1899 Fix**: Upgraded to read-excel-file v9 and resolved historical timezone shift (6:42h) using UTC extraction.
+10. **Clean Architecture**: Refactored calculation logic for daily-based shift evaluation.
+11. **Strictly Typed & Linted**: 100% pass on `pnpm lint` after resolving all `any` and unused variable warnings.
 
 == CRITICAL BUSINESS RULES ==
-- ER: Filter patients by selected doctor name + shift dates, map ICD-10 to billing codes from master-mapping.json
-- Ward: Get ALL patients for shift dates, EXCLUDE those admitted on the same day between 08:00:00 and 15:59:59 (those belong to ER doctor), auto-assign billing code "213"
-- Output format: [Patient Name, HN, Admit Date, Billing Code] as copyable tab-separated text
+- ER: Filter by doctor + shift. If shift total < 1,200, use flat rate.
+- Ward: Get all for shift date, exclude those admitted 08-16 on the same day.
+- Output: Copyable tab-separated text for hospital Excel system.
 
 == FILES TO READ FOR CONTEXT ==
-1. .agents/workflows/standards.md — Dev standards (MUST follow: English code, Thai summary, logic in composables, no backend)
-2. docs/implementation-plan.md — Full technical plan with column mapping table and business logic detail
-3. docs/project-status.md — Current progress, decisions log, tech versions
-4. nuxt.config.ts — Nuxt 4 config with Monitoring, SEO, and SPA settings
-5. assets/css/main.css — Tailwind v4 CSS-first theme config (@theme block)
-6. eslint.config.mjs — ESLint v9 Flat Config
+1. docs/implementation-plan.md — Detailed logic and structure.
+2. docs/project-status.md — Progress and decisions log.
+3. composables/useDfCalculator.ts — Core business logic.
+4. components/ResultTable.vue — UI and Smart Copy implementation.
 
 == WHAT REMAINS TO BE DONE ==
-1. TEST with real fixture data — upload `tests/fixtures/2025-11-ER-Raw.csv` and `tests/fixtures/2025-11-Ward-Raw.csv` (or `.xlsx`) via the browser to verify:
-   - Thai text (doctor names, patient names) renders correctly
-   - ER/Ward doctor filtering works for mixed data
-   - Ward 08:00-16:00 same-day admission exclusion logic is accurate
-   - Copy-to-clipboard produces correct tab-separated output
-2. GET the full ICD-10 → Billing Code master mapping table from the user — currently assets/data/master-mapping.json has placeholders (most codes default to "213")
-3. RESOLVE open questions:
-   - Should ER results be grouped by 3 time rounds (08-16, 16-24, 24-08)?
-   - Should the app calculate and display when fee falls below 1,200 THB flat rate?
-   - Confirm Col[7] is the correct HN field
-4. POLISH the UI — micro-animations, error edge cases, empty states
-
-== KNOWN ISSUES ==
-- The ER fixture file (2025-11-ER-Raw.csv) was pre-filtered to only contain one doctor's data. Real-world ER files will have MANY doctors mixed in.
-- master-mapping.json is a placeholder — needs real mapping data from the hospital's billing code table
+1. Get full ICD-10 → Billing Code master mapping data.
+2. Final UI/UX polish and micro-animations.
+3. Testing with more real-world, large datasets.
 
 == HOW TO RUN ==
 cd /Users/ball/Dev/GitHub/doctor-aek-df-helper
 pnpm run dev
-# Opens at http://localhost:3000
