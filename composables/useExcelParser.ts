@@ -33,19 +33,55 @@ export function useExcelParser() {
   const error = ref<string | null>(null);
 
   /**
-   * Parse a date string in d/M/yyyy format.
+   * Parse a date value (string or Date object).
    */
-  function parseDate(dateStr: string): Date | null {
-    if (!dateStr?.trim()) return null;
-    const cleaned = dateStr.trim();
+  function parseDate(dateVal: unknown): Date | null {
+    if (!dateVal) return null;
 
-    // Try d/M/yyyy first (Thai hospital format)
-    const parsed = parse(cleaned, "d/M/yyyy", new Date());
-    if (isValid(parsed)) return parsed;
+    if (dateVal instanceof Date) {
+      return isValid(dateVal) ? dateVal : null;
+    }
+
+    if (typeof dateVal === "string") {
+      const cleaned = dateVal.trim();
+      const today = new Date();
+      const currentYear = today.getFullYear();
+
+      // Case 1: Full date (d/M/yyyy)
+      let parsed = parse(cleaned, "d/M/yyyy", new Date());
+      if (isValid(parsed)) return parsed;
+
+      // Case 2: Short year (d/M/yy) - e.g. 23/11/25
+      parsed = parse(cleaned, "d/M/yy", new Date());
+      if (isValid(parsed)) return parsed;
+
+      // Case 3: Missing year (d/M) - e.g. 23/11
+      const dayMonthMatch = cleaned.match(/^(\d{1,2})\/(\d{1,2})$/);
+      if (dayMonthMatch) {
+        const d = dayMonthMatch[1];
+        const m = dayMonthMatch[2];
+        // Try current year first
+        let guessed = parse(`${d}/${m}/${currentYear}`, "d/M/yyyy", new Date());
+        // If the guessed date is in the future (> 1 month from now), it's likely last year's data
+        // (common in medical billing which is often retrospective)
+        if (guessed.getTime() > today.getTime() + 30 * 24 * 60 * 60 * 1000) {
+          guessed = parse(
+            `${d}/${m}/${currentYear - 1}`,
+            "d/M/yyyy",
+            new Date(),
+          );
+        }
+        if (isValid(guessed)) return guessed;
+      }
+    }
 
     // Fallback: try other common formats
-    const fallback = parse(cleaned, "dd/MM/yyyy", new Date());
+    const fallback = parse(String(dateVal).trim(), "dd/MM/yyyy", new Date());
     if (isValid(fallback)) return fallback;
+
+    // Fallback 2: try standard ISO or native JS parsing
+    const res = new Date(String(dateVal).trim());
+    if (isValid(res)) return res;
 
     return null;
   }
@@ -66,32 +102,72 @@ export function useExcelParser() {
   }
 
   /**
+   * Safely format time value from either string or Excel Date object.
+   * Handles Excel's 1899 epoch shift by using UTC methods.
+   */
+  function formatTime(val: unknown): string {
+    if (!val) return "";
+    if (val instanceof Date) {
+      // If year is 1899 or 1900, it's likely an Excel time-only cell.
+      // Use UTC to avoid historical timezone shifts (like GMT+6:42 in Bangkok 1899).
+      const h = val.getUTCHours().toString().padStart(2, "0");
+      const m = val.getUTCMinutes().toString().padStart(2, "0");
+      const s = val.getUTCSeconds().toString().padStart(2, "0");
+      return `${h}:${m}:${s}`;
+    }
+    return String(val).trim();
+  }
+
+  /**
    * Check if a row is a date header (section separator like "1/11/2025").
    */
   function isDateHeaderRow(row: unknown[]): boolean {
     const nonEmpty = row.filter((cell) => {
-      const val = String(cell ?? "").trim();
+      if (cell === null || cell === undefined) return false;
+      const val = String(cell).trim();
       return val.length > 0;
     });
 
     if (nonEmpty.length !== 1) return false;
-    const firstVal = String(nonEmpty[0]).trim();
-    return parseDate(firstVal) !== null;
+    const isFirstDate = parseDate(nonEmpty[0]) !== null;
+    if (isFirstDate) {
+      console.debug("Found date header row:", {
+        row,
+        val: nonEmpty[0],
+        parsed: parseDate(nonEmpty[0]),
+      });
+    }
+    return isFirstDate;
   }
 
   /**
    * Check if a row is a valid data row (has enough populated cells and numeric AN).
    */
   function isDataRow(row: unknown[]): boolean {
-    const nonEmpty = row.filter((cell) => {
-      const val = String(cell ?? "").trim();
-      return val.length > 0;
-    });
+    const nonEmptyIndices = [];
+    for (let i = 0; i < row.length; i++) {
+      const val = String(row[i] ?? "").trim();
+      if (val.length > 0) nonEmptyIndices.push(i);
+    }
 
-    if (nonEmpty.length < MIN_DATA_CELLS) return false;
+    if (nonEmptyIndices.length < MIN_DATA_CELLS) return false;
 
-    const an = String(row[CSV_COL.AN] ?? "").trim();
-    return /^\d+$/.test(an);
+    // Check AN (Admission Number) - usually a digit-only string or number
+    const anCell = row[CSV_COL.AN];
+    const an = String(anCell ?? "").trim();
+    const isVal = /^\d+$/.test(an);
+
+    if (isVal && nonEmptyIndices.length >= MIN_DATA_CELLS) {
+      // Logic for ward records: they have AN at index 0 and specific other columns
+      // For debug:
+      console.debug("Found data row:", {
+        rowLen: row.length,
+        an,
+        nonEmptyCount: nonEmptyIndices.length,
+      });
+    }
+
+    return isVal;
   }
 
   /**
@@ -105,8 +181,7 @@ export function useExcelParser() {
         const nonEmpty = row.filter(
           (cell) => String(cell ?? "").trim().length > 0,
         );
-        const dateStr = String(nonEmpty[0]).trim();
-        const date = parseDate(dateStr);
+        const date = parseDate(nonEmpty[0]);
         if (date) dates.push(date);
       }
     }
@@ -121,11 +196,11 @@ export function useExcelParser() {
     row: unknown[],
     roundingDate: Date,
   ): PatientRecord | null {
-    const admitDateStr = String(row[CSV_COL.ADMIT_DATE] ?? "").trim();
-    const admitDate = parseDate(admitDateStr);
+    const rawAdmitDate = row[CSV_COL.ADMIT_DATE];
+    const admitDate = parseDate(rawAdmitDate);
     if (!admitDate) return null;
 
-    const admitTime = String(row[CSV_COL.ADMIT_TIME] ?? "").trim();
+    const admitTime = formatTime(row[CSV_COL.ADMIT_TIME]);
     const admitDateTime = parseDateTime(admitDate, admitTime);
 
     return {
@@ -192,33 +267,58 @@ export function useExcelParser() {
         rows = parsedRows as unknown[][];
       }
 
-      if (!rows || rows.length === 0) {
-        throw new Error("ไม่พบข้อมูลในไฟล์");
-      }
+      console.info(`Starting to parse file: ${file.name} (${file.size} bytes)`);
+      console.debug(`Raw rows count: ${rows.length}`);
 
       // Extract shift dates from date header rows
       const shiftDates = extractShiftDates(rows);
+      console.debug(`Extracted shift dates:`, shiftDates);
 
       // Parse valid data rows into PatientRecords
       const records: PatientRecord[] = [];
       const doctorSet = new Set<string>();
       let currentRoundingDate: Date | null = null;
 
-      for (const row of rows) {
+      for (const [i, row] of rows.entries()) {
+        const rowIndex = i + 1;
         // If this is a date header (e.g., "2/11/2025"), update currentRoundingDate
         if (isDateHeaderRow(row)) {
           const nonEmpty = row.filter(
-            (cell) => String(cell ?? "").trim().length > 0,
+            (cell) =>
+              cell !== null &&
+              cell !== undefined &&
+              String(cell).trim().length > 0,
           );
-          currentRoundingDate = parseDate(String(nonEmpty[0]));
+          currentRoundingDate = parseDate(nonEmpty[0]);
+          console.debug(
+            `Changed rounding date for rows from line ${rowIndex} to:`,
+            currentRoundingDate,
+          );
           continue;
         }
 
-        if (!isDataRow(row) || !currentRoundingDate) continue;
+        if (!isDataRow(row)) continue;
+
+        if (!currentRoundingDate) {
+          console.warn(
+            `Row ${rowIndex} seems to be a data row but no rounding date has been set yet. Heading:`,
+            row.slice(0, 5),
+          );
+          continue;
+        }
 
         const record = rowToRecord(row, currentRoundingDate);
-        if (!record) continue;
-        if (!record.patientName) continue;
+        if (!record) {
+          console.warn(
+            `Row ${rowIndex} failed to convert to record:`,
+            row.slice(0, 10),
+          );
+          continue;
+        }
+        if (!record.patientName) {
+          console.warn(`Row ${rowIndex} has no patient name:`, record);
+          continue;
+        }
 
         records.push(record);
 

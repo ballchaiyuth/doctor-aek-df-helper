@@ -105,17 +105,42 @@
               </p>
               <p class="text-xs text-slate-500 mt-1">
                 {{ parsedData?.records.length }} รายการ ·
-                {{ parsedData?.doctors.length }} แพทย์ ·
-                {{ parsedData?.shiftDates.length }} วันเวร
+                {{ parsedData?.doctors.length }} แพทย์
               </p>
             </div>
           </div>
-          <button
-            class="px-4 py-2 text-xs text-slate-400 hover:text-red-400 hover:bg-red-400/5 rounded-lg border border-transparent hover:border-red-400/20 font-medium transition-all"
-            @click="reset"
-          >
-            เปลี่ยนไฟล์
-          </button>
+          <div class="flex items-center gap-3">
+            <button
+              class="px-4 py-2 text-xs text-app-green hover:bg-app-green/10 rounded-lg border border-app-green/20 font-medium transition-all"
+              @click="showAudit = !showAudit"
+            >
+              {{ showAudit ? "ซ่อนข้อมูลดิบ" : "ตรวจสอบข้อมูลดิบ" }}
+            </button>
+            <button
+              class="px-4 py-2 text-xs text-slate-400 hover:bg-white/5 rounded-lg border border-white/5 font-medium transition-all"
+              @click="showFeeRates = true"
+            >
+              ตรวจสอบเรทค่าตอบแทน
+            </button>
+            <button
+              class="px-4 py-2 text-xs text-slate-400 hover:text-red-400 hover:bg-red-400/5 rounded-lg border border-transparent hover:border-red-400/20 font-medium transition-all"
+              @click="reset"
+            >
+              เปลี่ยนไฟล์
+            </button>
+          </div>
+        </div>
+
+        <!-- Source Audit View -->
+        <div v-if="showAudit" class="mb-12">
+          <SourceAuditTable
+            :records="parsedData?.records || []"
+            :doctor-name="selectedDoctor"
+            :shift-dates="selectedShiftDates"
+            :overrides="manualOverrides"
+            :mode="activeTab"
+            @toggle-record="toggleRecordOverride"
+          />
         </div>
 
         <!-- ER Config -->
@@ -129,7 +154,7 @@
             :dates="parsedData?.shiftDates || []"
           />
           <button
-            class="w-full py-3 px-6 bg-app-green text-white font-semibold rounded-xl ring-1 ring-inset ring-white/10 hover:bg-app-green-hover active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-app-green disabled:active:scale-100"
+            class="w-full py-3 px-6 bg-app-green text-white font-semibold rounded-xl ring-1 ring-inset ring-white/10 hover:bg-app-green-hover active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             :disabled="!selectedDoctor || selectedShiftDates.length === 0"
             @click="generateERReport"
           >
@@ -144,7 +169,7 @@
             :dates="parsedData?.shiftDates || []"
           />
           <button
-            class="w-full py-3 px-6 bg-app-green text-white font-semibold rounded-xl ring-1 ring-inset ring-white/10 hover:bg-app-green-hover active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-app-green disabled:active:scale-100"
+            class="w-full py-3 px-6 bg-app-green text-white font-semibold rounded-xl ring-1 ring-inset ring-white/10 hover:bg-app-green-hover active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             :disabled="selectedShiftDates.length === 0"
             @click="generateWardReport"
           >
@@ -157,13 +182,13 @@
       <section v-if="currentStep === 'results'" class="animate-fade-in">
         <!-- Back button -->
         <button
-          class="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-slate-200 font-medium mb-6 transition-colors"
+          class="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-slate-200 font-medium mb-6 transition-colors group"
           @click="currentStep = 'config'"
         >
           <div
-            class="w-4 h-4 bg-current mask-[url('/icons/fa-arrow-left.svg')] mask-contain mask-no-repeat mask-center"
+            class="w-4 h-4 bg-current mask-[url('/icons/fa-arrow-left.svg')] mask-contain mask-no-repeat mask-center group-hover:-translate-x-1 transition-transform"
           />
-          ย้อนกลับ
+          ย้อนกลับไปตั้งค่า
         </button>
 
         <ResultTable :rows="reportRows" :mode="activeTab" />
@@ -171,15 +196,23 @@
     </main>
 
     <!-- Footer -->
-    <footer class="text-center py-8 text-xs text-slate-400">
-      Made with ❤️ for Dr. Aek — Wiset Chai Chan Hospital
+    <footer
+      class="text-center py-12 text-xs text-slate-500 border-t border-app-surface mt-12"
+    >
+      Made with ❤️ For Dr. Aek — Wiset Chai Chan Hospital
     </footer>
+
+    <!-- Dialogs -->
+    <FeeRateDialog v-model:visible="showFeeRates" />
   </div>
 </template>
 
 <script setup lang="ts">
+import feeRatesRaw from "@/assets/data/wiset-doctor-fee-rates.csv?raw";
 import type { DfReportRow } from "@/composables/useDfCalculator";
-import type { ParsedData } from "@/composables/useExcelParser";
+import type { ParsedData, PatientRecord } from "@/composables/useExcelParser";
+import { initFeeRates } from "@/utils/fee-rates";
+import { isSameDay } from "date-fns";
 
 const { parseFile, isLoading, error: parseError } = useExcelParser();
 const { calculateER, calculateWard } = useDfCalculator();
@@ -191,8 +224,15 @@ const selectedFileName = ref("");
 const selectedDoctor = ref("");
 const selectedShiftDates = ref<Date[]>([]);
 const reportRows = ref<DfReportRow[]>([]);
+const showAudit = ref(false);
+const showFeeRates = ref(false);
+const manualOverrides = ref(new Set<string>());
 
 const AEK_NAME = "นายแพทย์สรวิชญ์ สอาดสุด";
+
+onMounted(() => {
+  initFeeRates(feeRatesRaw).catch(console.error);
+});
 
 async function onFileSelected(file: File) {
   try {
@@ -200,39 +240,72 @@ async function onFileSelected(file: File) {
     const data = await parseFile(file);
     parsedData.value = data;
 
-    // VIP Auto-select: if Dr. Aek exists, pick him
     if (data.doctors.includes(AEK_NAME)) {
       selectedDoctor.value = AEK_NAME;
     }
 
-    // Auto-select all dates by default
     selectedShiftDates.value = [...data.shiftDates];
-
     currentStep.value = "config";
   } catch {
-    // error is already set in the composable
+    // error handled in composable
   }
+}
+
+function toggleRecordOverride(an: string) {
+  if (manualOverrides.value.has(an)) {
+    manualOverrides.value.delete(an);
+  } else {
+    manualOverrides.value.add(an);
+  }
+}
+
+/**
+ * Applying overrides before generating reports
+ */
+function getProcessedRecords(): PatientRecord[] {
+  if (!parsedData.value) return [];
+
+  return parsedData.value.records.filter((r) => {
+    // Logic match
+    const isShiftMatch = selectedShiftDates.value.some((sd) =>
+      isSameDay(r.roundingDate, sd),
+    );
+    const isDocMatch =
+      activeTab.value === "er"
+        ? r.attendingDoctor === selectedDoctor.value
+        : true;
+
+    const logicMatch = isShiftMatch && isDocMatch;
+    const hasOverride = manualOverrides.value.has(r.an);
+
+    // Final inclusion status (XOR)
+    return hasOverride ? !logicMatch : logicMatch;
+  });
 }
 
 function generateERReport() {
   if (!parsedData.value || !selectedDoctor.value) return;
 
+  // We use the filtered records for the calculator
+  const processed = getProcessedRecords();
+
   reportRows.value = calculateER(
-    parsedData.value.records,
+    processed,
     selectedDoctor.value,
     selectedShiftDates.value,
   );
   currentStep.value = "results";
+  showAudit.value = false;
 }
 
 function generateWardReport() {
   if (!parsedData.value) return;
 
-  reportRows.value = calculateWard(
-    parsedData.value.records,
-    selectedShiftDates.value,
-  );
+  const processed = getProcessedRecords();
+
+  reportRows.value = calculateWard(processed, selectedShiftDates.value);
   currentStep.value = "results";
+  showAudit.value = false;
 }
 
 function reset() {
@@ -242,18 +315,20 @@ function reset() {
   selectedDoctor.value = "";
   selectedShiftDates.value = [];
   reportRows.value = [];
+  showAudit.value = false;
+  manualOverrides.value.clear();
 }
 </script>
 
 <style scoped>
 .animate-fade-in {
-  animation: fadeIn 0.3s ease-out;
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
